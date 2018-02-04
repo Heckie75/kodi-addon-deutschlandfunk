@@ -1,6 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from datetime import datetime
+from operator import itemgetter
+
 import json
 import os
 import re
@@ -179,9 +182,17 @@ class Mediathek:
 
         index = 0
 
+        entries = []
+
         for item in items:
 
-            entry = {
+#       Does not work: see https://forum.kodi.tv/showthread.php?tid=112916
+#            if 'pubDate' in item:
+#                pubDate = datetime.strptime(item['pubDate'][:-6], '%a, %d %b %Y %H:%M:%S')
+#            else:
+            pubDate = None
+
+            entries = entries + [{
                     "path" : str(index),
                     "name" : item["title"],
                     "name2" : item["description"],
@@ -192,14 +203,20 @@ class Mediathek:
 						    "index" : str(index),
                             "url" : url
                         }
-                    ]
-                }
+                    ],
+                    "pubDate" : pubDate
 
-            self._add_list_item(entry, path)
+                }]
 
             index += 1
 
-        xbmcplugin.endOfDirectory(self._addon_handle, succeeded=True, updateListing=True, cacheToDisc=False)
+
+#        entries = sorted(entries, key=itemgetter('pubDate'), reverse=True)
+        for entry in entries:
+
+            self._add_list_item(entry, path)
+
+        xbmcplugin.endOfDirectory(self._addon_handle)
 
 
 
@@ -225,8 +242,6 @@ class Mediathek:
             _path = _href.replace("/podcasts/download/", "")
             _img = c.find(".//img")
 
-            xbmc.log(BASE_URL + _href.replace("/download", ""), xbmc.LOGNOTICE)
-
             entry = {
                     "path" : _path,
                     "name" : _img.get("alt"),
@@ -241,7 +256,7 @@ class Mediathek:
                 }
             self._add_list_item(entry, path)
 
-        xbmcplugin.endOfDirectory(self._addon_handle, succeeded=True, updateListing=True, cacheToDisc=False)
+        xbmcplugin.endOfDirectory(self._addon_handle)
 
 
 
@@ -286,7 +301,7 @@ class Mediathek:
                 }
             self._add_list_item(entry, path)
 
-        xbmcplugin.endOfDirectory(self._addon_handle, succeeded=True, updateListing=True, cacheToDisc=False)
+        xbmcplugin.endOfDirectory(self._addon_handle)
 
 
 
@@ -387,7 +402,7 @@ class Mediathek:
         for entry in parent["node"]:
             self._add_list_item(entry, path)
 
-        xbmcplugin.endOfDirectory(self._addon_handle, succeeded=True, updateListing=True, cacheToDisc=False)
+        xbmcplugin.endOfDirectory(self._addon_handle)
 
 
 

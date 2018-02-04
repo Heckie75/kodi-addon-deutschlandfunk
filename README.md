@@ -23,7 +23,7 @@ Weiterhin benutzt das Addon die Pythonbibliothek [xmltodict](https://github.com/
 
 ## Installation
 Für die Installation ist folgendes Archiv zu downloaden:
-[plugin.audio.deutschlandfunk.tgz](/plugin.audio.deutschlandfunk.tgz)
+[plugin.audio.deutschlandfunk.zip](/plugin.audio.deutschlandfunk.zip)
 
 Das Archiv ist im KODI-Addon Verzeichnis zu entpacken. Auf Ubuntu Systemen ist dieses Kodi-Verzeichnis unterhalb des home-Verzeichnisses zu finden:
 ```
