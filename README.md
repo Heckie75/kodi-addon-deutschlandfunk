@@ -31,7 +31,7 @@ Das Archiv ist im KODI-Addon Verzeichnis zu entpacken. Auf Ubuntu Systemen ist d
 $ cd ~/.kodi/addons/
 
 # Archiv-Datei auspackem
-$ tar xzf ~/Downloads/plugin.audio.deutschlandfunk.tgz
+$ tar xzf ~/Downloads/plugin.audio.deutschlandfunk.zip
 ```
 
 KODI muss neu gestartet werden.
