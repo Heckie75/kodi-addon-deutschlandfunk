@@ -236,12 +236,13 @@ class Mediathek:
         _dom = html.fromstring(_data)
         _casts = _dom.xpath('//li[@class="item"]')
 
-        for c in _casts:
-
-            _href = c.find("a").get("href")
+        for i in range(len(_casts)):
+        
+            _href = _dom.xpath('//li[@class="item"]//a')[i].get("href")
             _path = _href.replace("/podcasts/download/", "")
-            _img = c.find(".//img")
+            _img = _dom.xpath('//li[@class="item"]//img')[i]
 
+            xbmc.log("HTML: %s" % html.tostring(_img), xbmc.LOGNOTICE)
             entry = {
                     "path" : _path,
                     "name" : _img.get("alt"),
