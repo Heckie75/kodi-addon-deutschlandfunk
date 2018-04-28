@@ -17,7 +17,7 @@ import xbmcplugin
 import xbmcaddon
 import xmltodict
 
-from lxml import html
+from bs4 import BeautifulSoup
 
 __PLUGIN_ID__ = "plugin.audio.deutschlandfunk"
 
@@ -233,16 +233,15 @@ class Mediathek:
         _file.close()
 
         # parse site and read podcast meta data kindly provided as js
-        _dom = html.fromstring(_data)
-        _casts = _dom.xpath('//li[@class="item"]')
-
-        for i in range(len(_casts)):
+        soup = BeautifulSoup(_data, 'html.parser')
+        _casts = soup.select('li.item')
         
-            _href = _dom.xpath('//li[@class="item"]//a')[i].get("href")
+        for _cast in _casts:
+        
+            _href = _cast.a.get("href")
             _path = _href.replace("/podcasts/download/", "")
-            _img = _dom.xpath('//li[@class="item"]//img')[i]
+            _img = _cast.img
 
-            xbmc.log("HTML: %s" % html.tostring(_img), xbmc.LOGNOTICE)
             entry = {
                     "path" : _path,
                     "name" : _img.get("alt"),
@@ -272,8 +271,8 @@ class Mediathek:
         _file.close()
 
         # parse site and read podcast meta data kindly provided as js
-        _dom = html.fromstring(_data)
-        _js_cast_defs = _dom.xpath('.//li/script[@type="text/javascript"]')    
+        soup = BeautifulSoup(_data, 'html.parser')        
+        _js_cast_defs = soup.select('li > script[type="text/javascript"]')
         _regex = re.compile("window.podcastData_[0-9a-f_]+ = ")
         _regex2 = re.compile("};")
 
