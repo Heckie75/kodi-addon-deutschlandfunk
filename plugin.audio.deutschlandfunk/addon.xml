@@ -7,6 +7,7 @@
 		<import addon="xmbc.json" version="7.0.0" />
 		<import addon="xmbc.metadata" version="2.1.0" />
 		<import addon="xmbc.addon" version="17.0.0" />
+		<import addon="script.module.beautifulsoup4" version="4.3.2" />
 	</requires>
 	<extension point="xbmc.python.pluginsource" library="addon.py">
 		<provides>audio</provides>

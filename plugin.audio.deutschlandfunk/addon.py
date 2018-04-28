@@ -17,7 +17,11 @@ import xbmcplugin
 import xbmcaddon
 import xmltodict
 
-from bs4 import BeautifulSoup
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    sys.path.append('/storage/.kodi/addons/script.module.beautifulsoup4/lib')
+    from bs4 import BeautifulSoup
 
 __PLUGIN_ID__ = "plugin.audio.deutschlandfunk"
 
@@ -178,6 +182,11 @@ class Mediathek:
 
         channel = rss_feed["rss"]["channel"]
         image = channel["image"]["url"]
+        
+        if not "item" in channel:
+            xbmcplugin.endOfDirectory(self._addon_handle)
+            return
+
         items = channel["item"]
 
         index = 0
