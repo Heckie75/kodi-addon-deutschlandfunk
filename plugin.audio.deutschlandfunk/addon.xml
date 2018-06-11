@@ -9,11 +9,15 @@
 		<provides>audio</provides>
 	</extension>
 	<extension point="xbmc.addon.metadata">
-		<summary lang="en_gb">Sender &amp; Podcasts des Deutschlandfunks in
-			KODI</summary>
-		<description lang="en_gb">Sender &amp; Podcasts des
-			Deutschlandfunks in KODI</description>
-		<disclaimer lang="en_gb"></disclaimer>
+		<summary>Sender &amp; Podcasts des Deutschlandfunks in KODI</summary>
+		<description>Kodi Addon für Deutschlandfunk, Deutschlandfunk Kultur und 
+Deutschlandfunk Nova für Livestream und Podcasts
+
+Mit diesem Addon können Radioprogramme des Deutschlandfunks gehört werden.
+Es können sowohl die Live Streams vom Deutschlandfunk, 
+Deutschlandfunk Kultur und Deutschlandfunk Nova als auch
+sämtliche Podcasts der Sender gestreamt werden.</description>
+		<disclaimer>Der Author des Addons ist nicht verantwortlich für die Inhalte, die auf Ihr Gerät gestreamt werden. Insbesondere liegt es in der alleinigen Verantwortung und Pflicht des Addon-Nutzers sich davon zu überzeugen, dass die Urheberrechtsvereinbarungen der zum Streaming aufgerufenden Websites und Inhalte nicht verletzt werden.</disclaimer>
 		<language></language>
 		<platform>all</platform>
 		<license>MIT License</license>
@@ -21,12 +25,13 @@
 		<website>https://github.com/Heckie75/kodi-addon-deutschlandfunk</website>
 		<email></email>
 		<source>https://github.com/Heckie75/kodi-addon-deutschlandfunk</source>
-		<news>v1.0.0 (2018-06-11)
-        - First release</news>
+		<news>
+v1.0.0 (2018-06-11)
+- First release</news>
 		<assets>
 			<icon>icon.png</icon>
 			<fanart>fanart.png</fanart>
-			<screenshot>resources/assets/screen_01_overview.png</screenshot>
+			<screenshot>resources/assets/screen.png</screenshot>
 		</assets>
 	</extension>
 </addon>
