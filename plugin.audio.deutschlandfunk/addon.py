@@ -29,7 +29,7 @@ URL_STREAM_DLF = 'http://dg-dradio-http-dus-dtag-cdn.cast.addradio.de/dlf/01/128
 URL_STREAM_DLK = 'http://dg-dradio-http-dus-dtag-cdn.cast.addradio.de/dlf/02/128/mp3/stream.mp3'
 URL_STREAM_NOVA = 'http://dg-dradio-http-dus-dtag-cdn.cast.addradio.de/dlf/03/128/mp3/stream.mp3'
 
-URL_PODCASTS_DLF = 'http://www.deutschlandfunk.de/podcasts.2516.de.html?drpp%3Ahash=displayAllBroadcasts'
+URL_PODCASTS_DLF = 'https://www.deutschlandfunk.de/podcasts.2516.de.html?drpp%3Ahash=displayAllBroadcasts'
 URL_PODCASTS_DLK = 'http://www.deutschlandfunkkultur.de/podcasts.2502.de.html?drpp%3Ahash=displayAllBroadcasts'
 URL_PODCASTS_NOVA = 'https://www.deutschlandfunknova.de/podcasts'
 
@@ -99,7 +99,7 @@ class Mediathek:
                                 "icon" : "icon_drk_rss",
                                 "params" : [
                                     {
-                                        "call" : "parseDLF",
+                                        "call" : "parseDLK",
                                         "url" : URL_PODCASTS_DLK
                                     }
                                 ],
@@ -182,7 +182,7 @@ class Mediathek:
 
         channel = rss_feed["rss"]["channel"]
         image = channel["image"]["url"]
-        
+
         if not "item" in channel:
             xbmcplugin.endOfDirectory(self._addon_handle)
             return
@@ -244,9 +244,9 @@ class Mediathek:
         # parse site and read podcast meta data kindly provided as js
         soup = BeautifulSoup(_data, 'html.parser')
         _casts = soup.select('li.item')
-        
+
         for _cast in _casts:
-        
+
             _href = _cast.a.get("href")
             _path = _href.replace("/podcasts/download/", "")
             _img = _cast.img
@@ -271,6 +271,39 @@ class Mediathek:
 
 
     def parseDLF(self, parent, path, params):
+
+        url = params["url"][0]
+
+        # download html site with podcast overview
+        _file = urllib2.urlopen(url)
+        _data = _file.read()
+        _file.close()
+
+        soup = BeautifulSoup(_data, 'html.parser')
+        _js_cast_defs = soup.select('span.abo.dradio-podlove')
+
+        podcasts = []
+        for _def in _js_cast_defs:
+            entry = {
+                    "path" : _def["data-buttonid"],
+                    "name" : _def["data-title"],
+                    "icon" : _def["data-logosrc"],
+                    "params" : [
+                        {
+                            "call" : "renderRss",
+                            "url" : _def["data-url"]
+                        }
+                    ],
+                    "node" : []
+                }
+            self._add_list_item(entry, path)
+
+        xbmcplugin.endOfDirectory(self._addon_handle)
+
+
+
+
+    def parseDLK(self, parent, path, params):
 
         url = params["url"][0]
 
@@ -311,6 +344,7 @@ class Mediathek:
             self._add_list_item(entry, path)
 
         xbmcplugin.endOfDirectory(self._addon_handle)
+
 
 
 
