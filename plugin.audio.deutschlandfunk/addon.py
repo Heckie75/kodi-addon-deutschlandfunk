@@ -144,7 +144,9 @@ class Mediathek:
 
     def _loadRss(self, url):
 
-        _file = urllib2.urlopen(url)
+        opener = urllib2.build_opener()
+        opener.addheaders = [('User-Agent', 'Mozilla/5.0')]
+        _file = opener.open(url)
         _data = _file.read()
         _file.close()
 
