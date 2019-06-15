@@ -25,12 +25,12 @@ except ImportError:
 
 __PLUGIN_ID__ = "plugin.audio.deutschlandfunk"
 
-URL_STREAM_DLF = 'http://dg-dradio-http-dus-dtag-cdn.cast.addradio.de/dlf/01/128/mp3/stream.mp3'
-URL_STREAM_DLK = 'http://dg-dradio-http-dus-dtag-cdn.cast.addradio.de/dlf/02/128/mp3/stream.mp3'
-URL_STREAM_NOVA = 'http://dg-dradio-http-dus-dtag-cdn.cast.addradio.de/dlf/03/128/mp3/stream.mp3'
+URL_STREAM_DLF = 'http://st01.dlf.de/dlf/01/128/mp3/stream.mp3'
+URL_STREAM_DLK = 'http://st02.dlf.de/dlf/02/128/mp3/stream.mp3'
+URL_STREAM_NOVA = 'http://st03.dlf.de/dlf/03/128/mp3/stream.mp3'
 
 URL_PODCASTS_DLF = 'https://www.deutschlandfunk.de/podcasts.2516.de.html?drpp%3Ahash=displayAllBroadcasts'
-URL_PODCASTS_DLK = 'http://www.deutschlandfunkkultur.de/podcasts.2502.de.html?drpp%3Ahash=displayAllBroadcasts'
+URL_PODCASTS_DLK = 'https://www.deutschlandfunkkultur.de/podcasts.2502.de.html?drpp%3Ahash=displayAllBroadcasts'
 URL_PODCASTS_NOVA = 'https://www.deutschlandfunknova.de/podcasts'
 
 settings = xbmcaddon.Addon(id=__PLUGIN_ID__);
