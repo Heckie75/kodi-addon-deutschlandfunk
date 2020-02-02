@@ -99,7 +99,7 @@ class Mediathek:
                                 "icon" : "icon_drk_rss",
                                 "params" : [
                                     {
-                                        "call" : "parseDLK",
+                                        "call" : "parseDLF",
                                         "url" : URL_PODCASTS_DLK
                                     }
                                 ],
