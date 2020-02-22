@@ -1,9 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from datetime import datetime
-from operator import itemgetter
-
 import json
 import os
 import re
@@ -25,16 +22,15 @@ except ImportError:
 
 __PLUGIN_ID__ = "plugin.audio.deutschlandfunk"
 
-URL_STREAM_DLF = 'http://st01.dlf.de/dlf/01/128/mp3/stream.mp3'
-URL_STREAM_DLK = 'http://st02.dlf.de/dlf/02/128/mp3/stream.mp3'
-URL_STREAM_NOVA = 'http://st03.dlf.de/dlf/03/128/mp3/stream.mp3'
+URL_STREAMS_RPC = 'https://srv.deutschlandradio.de/config-feed.2828.de.rpc'
 
 URL_PODCASTS_DLF = 'https://www.deutschlandfunk.de/podcasts.2516.de.html?drpp%3Ahash=displayAllBroadcasts'
 URL_PODCASTS_DLK = 'https://www.deutschlandfunkkultur.de/podcasts.2502.de.html?drpp%3Ahash=displayAllBroadcasts'
 URL_PODCASTS_NOVA = 'https://www.deutschlandfunknova.de/podcasts'
 
 settings = xbmcaddon.Addon(id=__PLUGIN_ID__);
-addon_dir = xbmc.translatePath( settings.getAddonInfo('path') )
+addon_dir = xbmc.translatePath(settings.getAddonInfo('path'))
+
 
 class Mediathek:
 
@@ -43,8 +39,10 @@ class Mediathek:
 
     def __init__(self):
 
+        meta = self._loadJSON(URL_STREAMS_RPC)
+
         self._menu = [
-            { # root
+            {  # root
                 "path" : "",
                 "node" : [
                     {
@@ -59,7 +57,7 @@ class Mediathek:
                                 "params" : [
                                     {
                                         "call" : "play",
-                                        "url" : URL_STREAM_DLF
+                                        "url" : meta['livestreams']['dlf']['mp3']['high']
                                     }
                                 ]
                             },
@@ -89,7 +87,7 @@ class Mediathek:
                                 "params" : [
                                     {
                                         "call" : "play",
-                                        "url" : URL_STREAM_DLK
+                                        "url" : meta['livestreams']['dlf_kultur']['mp3']['high']
                                     }
                                 ]
                             },
@@ -119,7 +117,7 @@ class Mediathek:
                                 "params" : [
                                     {
                                         "call" : "play",
-                                        "url" : URL_STREAM_NOVA
+                                        "url" : meta['livestreams']['dlf_nova']['mp3']['high']
                                     }
                                 ]
                             },
@@ -141,7 +139,16 @@ class Mediathek:
             }
         ]
 
+    def _loadJSON(self, url):
 
+        opener = urllib2.build_opener()
+        opener.addheaders = [('User-Agent', 'Mozilla/5.0')]
+        _file = opener.open(url)
+        _data = _file.read()
+        _file.close()
+        
+        return json.loads(_data)
+        
     def _loadRss(self, url):
 
         opener = urllib2.build_opener()
@@ -152,16 +159,12 @@ class Mediathek:
 
         return xmltodict.parse(_data)
 
-
-
-
     def playRss(self, parent, path, params):
 
         url = params["url"][0]
         rss_feed = self._loadRss(url)
 
         channel = rss_feed["rss"]["channel"]
-        image = channel["image"]["url"]
         items = channel["item"]
 
         index = int(params["index"][0])
@@ -173,9 +176,6 @@ class Mediathek:
             stream_url = ["guid"]
 
         xbmc.executebuiltin('PlayMedia(%s)' % stream_url)
-
-
-
 
     def renderRss(self, parent, path, params):
 
@@ -211,7 +211,7 @@ class Mediathek:
                     "params" : [
                         {
                             "call" : "playRss",
-						    "index" : str(index),
+                            "index" : str(index),
                             "url" : url
                         }
                     ],
@@ -221,16 +221,12 @@ class Mediathek:
 
             index += 1
 
-
 #        entries = sorted(entries, key=itemgetter('pubDate'), reverse=True)
         for entry in entries:
 
             self._add_list_item(entry, path)
 
         xbmcplugin.endOfDirectory(self._addon_handle)
-
-
-
 
     def parseNova(self, parent, path, params):
 
@@ -269,9 +265,6 @@ class Mediathek:
 
         xbmcplugin.endOfDirectory(self._addon_handle)
 
-
-
-
     def parseDLF(self, parent, path, params):
 
         url = params["url"][0]
@@ -284,7 +277,6 @@ class Mediathek:
         soup = BeautifulSoup(_data, 'html.parser')
         _js_cast_defs = soup.select('span.abo.dradio-podlove')
 
-        podcasts = []
         for _def in _js_cast_defs:
             entry = {
                     "path" : _def["data-buttonid"],
@@ -301,9 +293,6 @@ class Mediathek:
             self._add_list_item(entry, path)
 
         xbmcplugin.endOfDirectory(self._addon_handle)
-
-
-
 
     def parseDLK(self, parent, path, params):
 
@@ -328,7 +317,6 @@ class Mediathek:
             _json_def = json.loads(_def)
             podcasts += [ _json_def ]
 
-
         for podcast in podcasts:
 
             entry = {
@@ -347,16 +335,10 @@ class Mediathek:
 
         xbmcplugin.endOfDirectory(self._addon_handle)
 
-
-
-
     def play(self, parent, path, params):
 
         url = params["url"][0]
         xbmc.executebuiltin('PlayMedia(%s)' % url)
-
-
-
 
     def _get_node_by_path(self, path):
 
@@ -375,10 +357,7 @@ class Mediathek:
 
         return directory
 
-
-
-
-    def _build_param_string(self, params, current = ""):
+    def _build_param_string(self, params, current=""):
 
         if params == None:
             return current
@@ -389,9 +368,6 @@ class Mediathek:
                 current += name + "=" + str(obj[name])
 
         return current
-
-
-
 
     def _add_list_item(self, entry, path):
 
@@ -404,7 +380,7 @@ class Mediathek:
         param_string = ""
         if "params" in entry:
             param_string = self._build_param_string(entry["params"],
-                current = param_string)
+                current=param_string)
 
         if "node" in entry:
             is_folder = True
@@ -427,7 +403,7 @@ class Mediathek:
         else:
             icon_file = None
 
-        li = xbmcgui.ListItem(label, iconImage = icon_file)
+        li = xbmcgui.ListItem(label, iconImage=icon_file)
 
         if "name2" in entry:
             li.setLabel2(entry["name2"])
@@ -435,12 +411,9 @@ class Mediathek:
         xbmcplugin.addDirectoryItem(handle=self._addon_handle,
                                 listitem=li,
                                 url="plugin://" + __PLUGIN_ID__
-                                + item_path
-                                + param_string,
+                                +item_path
+                                +param_string,
                                 isFolder=is_folder)
-
-
-
 
     def _browse(self, parent, path):
 
@@ -448,9 +421,6 @@ class Mediathek:
             self._add_list_item(entry, path)
 
         xbmcplugin.endOfDirectory(self._addon_handle)
-
-
-
 
     def handle(self, argv):
 
@@ -462,13 +432,12 @@ class Mediathek:
         node = self._get_node_by_path(path)
         if "call" in url_params:
 
-            getattr(self, url_params["call"][0])(parent = node,
-                                        path = path,
-                                        params = url_params)
+            getattr(self, url_params["call"][0])(parent=node,
+                                        path=path,
+                                        params=url_params)
 
         else:
-            self._browse(parent = node, path = path)
-
+            self._browse(parent=node, path=path)
 
 
 if __name__ == '__main__':
