@@ -1,18 +1,19 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import http.client
 import json
 import os
 import re
-import urlparse
-import urllib2
 import sys
+import urllib.parse
+import xmltodict
 
 import xbmc
 import xbmcgui
 import xbmcplugin
 import xbmcaddon
-import xmltodict
+import xbmcvfs
 
 try:
     from bs4 import BeautifulSoup
@@ -22,14 +23,14 @@ except ImportError:
 
 __PLUGIN_ID__ = "plugin.audio.deutschlandfunk"
 
-URL_STREAMS_RPC = 'https://srv.deutschlandradio.de/config-feed.2828.de.rpc'
+URL_STREAMS_RPC = "https://srv.deutschlandradio.de/config-feed.2828.de.rpc"
 
-URL_PODCASTS_DLF = 'https://www.deutschlandfunk.de/podcasts.2516.de.html?drpp%3Ahash=displayAllBroadcasts'
-URL_PODCASTS_DLK = 'https://www.deutschlandfunkkultur.de/podcasts.2502.de.html?drpp%3Ahash=displayAllBroadcasts'
-URL_PODCASTS_NOVA = 'https://www.deutschlandfunknova.de/podcasts'
+URL_PODCASTS_DLF = "https://www.deutschlandfunk.de/podcasts.2516.de.html?drpp%3Ahash=displayAllBroadcasts"
+URL_PODCASTS_DLK = "https://www.deutschlandfunkkultur.de/podcasts.2502.de.html?drpp%3Ahash=displayAllBroadcasts"
+URL_PODCASTS_NOVA = "https://www.deutschlandfunknova.de/podcasts"
 
-settings = xbmcaddon.Addon(id=__PLUGIN_ID__);
-addon_dir = xbmc.translatePath(settings.getAddonInfo('path'))
+settings = xbmcaddon.Addon(id=__PLUGIN_ID__)
+addon_dir = xbmcvfs.translatePath(settings.getAddonInfo('path'))
 
 
 class Mediathek:
@@ -43,95 +44,95 @@ class Mediathek:
 
         self._menu = [
             {  # root
-                "path" : "",
-                "node" : [
+                "path": "",
+                "node": [
                     {
-                        "path" : "dlf",
-                        "name" : "Deutschlandfunk",
-                        "icon" : "icon_dlf",
-                        "node" : [
+                        "path": "dlf",
+                        "name": "Deutschlandfunk",
+                        "icon": "icon_dlf",
+                        "node": [
                             {
-                                "path" : "stream",
-                                "name" : "Deutschlandfunk",
-                                "icon" : "icon_dlf",
-                                "params" : [
+                                "path": "stream",
+                                "name": "Deutschlandfunk",
+                                "icon": "icon_dlf",
+                                "params": [
                                     {
-                                        "call" : "play",
-                                        "url" : meta['livestreams']['dlf']['mp3']['high']
+                                        "call": "play",
+                                        "url": meta['livestreams']['dlf']['mp3']['high']
                                     }
                                 ]
                             },
                             {
-                                "path" : "podcasts",
-                                "name" : "Podcasts",
-                                "icon" : "icon_dlf_rss",
-                                "params" : [
+                                "path": "podcasts",
+                                "name": "Podcasts",
+                                "icon": "icon_dlf_rss",
+                                "params": [
                                     {
-                                        "call" : "parseDLF",
-                                        "url" : URL_PODCASTS_DLF
+                                        "call": "parseDLF",
+                                        "url": URL_PODCASTS_DLF
                                     }
                                 ],
-                                "node" : []
+                                "node": []
                             }
                         ]
                     },
                     {
-                        "path" : "dkultur",
-                        "name" : "Deutschlandfunk Kultur",
-                        "icon" : "icon_drk",
-                        "node" : [
+                        "path": "dkultur",
+                        "name": "Deutschlandfunk Kultur",
+                        "icon": "icon_drk",
+                        "node": [
                             {
-                                "path" : "stream",
-                                "name" : "Deutschlandfunk Kultur",
-                                "icon" : "icon_drk",
-                                "params" : [
+                                "path": "stream",
+                                "name": "Deutschlandfunk Kultur",
+                                "icon": "icon_drk",
+                                "params": [
                                     {
-                                        "call" : "play",
-                                        "url" : meta['livestreams']['dlf_kultur']['mp3']['high']
+                                        "call": "play",
+                                        "url": meta['livestreams']['dlf_kultur']['mp3']['high']
                                     }
                                 ]
                             },
                             {
-                                "path" : "podcasts",
-                                "name" : "Podcasts",
-                                "icon" : "icon_drk_rss",
-                                "params" : [
+                                "path": "podcasts",
+                                "name": "Podcasts",
+                                "icon": "icon_drk_rss",
+                                "params": [
                                     {
-                                        "call" : "parseDLF",
-                                        "url" : URL_PODCASTS_DLK
+                                        "call": "parseDLF",
+                                        "url": URL_PODCASTS_DLK
                                     }
                                 ],
-                                "node" : []
+                                "node": []
                             }
                         ]
                     },
                     {
-                        "path" : "nova",
-                        "name" : "Deutschlandfunk Nova",
-                        "icon" : "icon_nova",
-                        "node" : [
+                        "path": "nova",
+                        "name": "Deutschlandfunk Nova",
+                        "icon": "icon_nova",
+                        "node": [
                             {
-                                "path" : "stream",
-                                "name" : "Deutschlandfunk Nova",
-                                "icon" : "icon_nova",
-                                "params" : [
+                                "path": "stream",
+                                "name": "Deutschlandfunk Nova",
+                                "icon": "icon_nova",
+                                "params": [
                                     {
-                                        "call" : "play",
-                                        "url" : meta['livestreams']['dlf_nova']['mp3']['high']
+                                        "call": "play",
+                                        "url": meta['livestreams']['dlf_nova']['mp3']['high']
                                     }
                                 ]
                             },
                             {
-                                "path" : "podcasts",
-                                "name" : "Podcasts",
-                                "icon" : "icon_nova_rss",
-                                "params" : [
+                                "path": "podcasts",
+                                "name": "Podcasts",
+                                "icon": "icon_nova_rss",
+                                "params": [
                                     {
-                                        "call" : "parseNova",
-                                        "url" : URL_PODCASTS_NOVA
+                                        "call": "parseNova",
+                                        "url": URL_PODCASTS_NOVA
                                     }
                                 ],
-                                "node" : []
+                                "node": []
                             }
                         ]
                     }
@@ -139,25 +140,28 @@ class Mediathek:
             }
         ]
 
+    def _requestHttp(self, url):
+
+        parse = urllib.parse.urlparse(url)
+        if parse.scheme == "https":
+            conn = http.client.HTTPSConnection(parse.netloc)
+        else:
+            conn = http.client.HTTPConnection(parse.netloc)
+
+        headers = {'user-agent': "Mozilla/5.0"}
+        conn.request("GET", parse.path + (("?" + parse.query)
+                                          if parse.query != "" else ""), headers=headers)
+        res = conn.getresponse()
+        data = res.read()
+        return data.decode("utf-8")
+
     def _loadJSON(self, url):
 
-        opener = urllib2.build_opener()
-        opener.addheaders = [('User-Agent', 'Mozilla/5.0')]
-        _file = opener.open(url)
-        _data = _file.read()
-        _file.close()
-        
-        return json.loads(_data)
-        
+        return json.loads(self._requestHttp(url))
+
     def _loadRss(self, url):
 
-        opener = urllib2.build_opener()
-        opener.addheaders = [('User-Agent', 'Mozilla/5.0')]
-        _file = opener.open(url)
-        _data = _file.read()
-        _file.close()
-
-        return xmltodict.parse(_data)
+        return xmltodict.parse(self._requestHttp(url))
 
     def playRss(self, parent, path, params):
 
@@ -197,27 +201,27 @@ class Mediathek:
 
         for item in items:
 
-#       Does not work: see https://forum.kodi.tv/showthread.php?tid=112916
-#            if 'pubDate' in item:
-#                pubDate = datetime.strptime(item['pubDate'][:-6], '%a, %d %b %Y %H:%M:%S')
-#            else:
+            #       Does not work: see https://forum.kodi.tv/showthread.php?tid=112916
+            #            if 'pubDate' in item:
+            #                pubDate = datetime.strptime(item['pubDate'][:-6], '%a, %d %b %Y %H:%M:%S')
+            #            else:
             pubDate = None
 
             entries = entries + [{
-                    "path" : str(index),
-                    "name" : item["title"],
-                    "name2" : item["description"],
-                    "icon" : image,
-                    "params" : [
-                        {
-                            "call" : "playRss",
-                            "index" : str(index),
-                            "url" : url
-                        }
-                    ],
-                    "pubDate" : pubDate
+                "path": str(index),
+                "name": item["title"],
+                "name2": item["description"],
+                "icon": image,
+                "params": [
+                    {
+                        "call": "playRss",
+                        "index": str(index),
+                        "url": url
+                    }
+                ],
+                "pubDate": pubDate
 
-                }]
+            }]
 
             index += 1
 
@@ -235,9 +239,7 @@ class Mediathek:
         url = params["url"][0]
 
         # download html site with podcast overview
-        _file = urllib2.urlopen(url)
-        _data = _file.read()
-        _file.close()
+        _data = self._requestHttp(url)
 
         # parse site and read podcast meta data kindly provided as js
         soup = BeautifulSoup(_data, 'html.parser')
@@ -250,17 +252,17 @@ class Mediathek:
             _img = _cast.img
 
             entry = {
-                    "path" : _path,
-                    "name" : _img.get("alt"),
-                    "icon" : _img.get("src"),
-                    "params" : [
-                        {
-                            "call" : "renderRss",
-                            "url" : BASE_URL + _path
-                        }
-                    ],
-                    "node" : []
-                }
+                "path": _path,
+                "name": _img.get("alt"),
+                "icon": _img.get("src"),
+                "params": [
+                    {
+                        "call": "renderRss",
+                        "url": BASE_URL + _path
+                    }
+                ],
+                "node": []
+            }
             self._add_list_item(entry, path)
 
         xbmcplugin.endOfDirectory(self._addon_handle)
@@ -270,26 +272,24 @@ class Mediathek:
         url = params["url"][0]
 
         # download html site with podcast overview
-        _file = urllib2.urlopen(url)
-        _data = _file.read()
-        _file.close()
+        _data = self._requestHttp(url)
 
         soup = BeautifulSoup(_data, 'html.parser')
         _js_cast_defs = soup.select('span.abo.dradio-podlove')
 
         for _def in _js_cast_defs:
             entry = {
-                    "path" : _def["data-buttonid"],
-                    "name" : _def["data-title"],
-                    "icon" : _def["data-logosrc"],
-                    "params" : [
-                        {
-                            "call" : "renderRss",
-                            "url" : _def["data-url"]
-                        }
-                    ],
-                    "node" : []
-                }
+                "path": _def["data-buttonid"],
+                "name": _def["data-title"],
+                "icon": _def["data-logosrc"],
+                "params": [
+                    {
+                        "call": "renderRss",
+                        "url": _def["data-url"]
+                    }
+                ],
+                "node": []
+            }
             self._add_list_item(entry, path)
 
         xbmcplugin.endOfDirectory(self._addon_handle)
@@ -299,12 +299,10 @@ class Mediathek:
         url = params["url"][0]
 
         # download html site with podcast overview
-        _file = urllib2.urlopen(url)
-        _data = _file.read()
-        _file.close()
+        _data = self._requestHttp(url)
 
         # parse site and read podcast meta data kindly provided as js
-        soup = BeautifulSoup(_data, 'html.parser')        
+        soup = BeautifulSoup(_data, 'html.parser')
         _js_cast_defs = soup.select('li > script[type="text/javascript"]')
         _regex = re.compile("window.podcastData_[0-9a-f_]+ = ")
         _regex2 = re.compile("};")
@@ -315,22 +313,22 @@ class Mediathek:
             _def = _regex.sub("", _def.text)
             _def = _regex2.sub("}", _def)
             _json_def = json.loads(_def)
-            podcasts += [ _json_def ]
+            podcasts += [_json_def]
 
         for podcast in podcasts:
 
             entry = {
-                    "path" : podcast["id"],
-                    "name" : podcast["title"],
-                    "icon" : podcast["cover"],
-                    "params" : [
-                        {
-                            "call" : "renderRss",
-                            "url" : podcast["feeds"][0]["url"]
-                        }
-                    ],
-                    "node" : []
-                }
+                "path": podcast["id"],
+                "name": podcast["title"],
+                "icon": podcast["cover"],
+                "params": [
+                    {
+                        "call": "renderRss",
+                        "url": podcast["feeds"][0]["url"]
+                    }
+                ],
+                "node": []
+            }
             self._add_list_item(entry, path)
 
         xbmcplugin.endOfDirectory(self._addon_handle)
@@ -380,7 +378,7 @@ class Mediathek:
         param_string = ""
         if "params" in entry:
             param_string = self._build_param_string(entry["params"],
-                current=param_string)
+                                                    current=param_string)
 
         if "node" in entry:
             is_folder = True
@@ -403,17 +401,18 @@ class Mediathek:
         else:
             icon_file = None
 
-        li = xbmcgui.ListItem(label, iconImage=icon_file)
+        li = xbmcgui.ListItem(label)
+        li.setArt({"icon": icon_file})
 
         if "name2" in entry:
             li.setLabel2(entry["name2"])
 
         xbmcplugin.addDirectoryItem(handle=self._addon_handle,
-                                listitem=li,
-                                url="plugin://" + __PLUGIN_ID__
-                                +item_path
-                                +param_string,
-                                isFolder=is_folder)
+                                    listitem=li,
+                                    url="plugin://" + __PLUGIN_ID__
+                                    + item_path
+                                    + param_string,
+                                    isFolder=is_folder)
 
     def _browse(self, parent, path):
 
@@ -426,15 +425,14 @@ class Mediathek:
 
         self._addon_handle = int(argv[1])
 
-        path = urlparse.urlparse(argv[0]).path
-        url_params = urlparse.parse_qs(argv[2][1:])
+        path = urllib.parse.urlparse(argv[0]).path
+        url_params = urllib.parse.parse_qs(argv[2][1:])
 
         node = self._get_node_by_path(path)
         if "call" in url_params:
-
             getattr(self, url_params["call"][0])(parent=node,
-                                        path=path,
-                                        params=url_params)
+                                                 path=path,
+                                                 params=url_params)
 
         else:
             self._browse(parent=node, path=path)
