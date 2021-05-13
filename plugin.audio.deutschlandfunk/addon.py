@@ -1,10 +1,10 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
-import http.client
+from bs4 import BeautifulSoup
+from datetime import datetime
+import base64
 import json
 import os
 import re
+import requests
 import sys
 import urllib.parse
 import xmltodict
@@ -15,12 +15,6 @@ import xbmcplugin
 import xbmcaddon
 import xbmcvfs
 
-try:
-    from bs4 import BeautifulSoup
-except ImportError:
-    sys.path.append('/storage/.kodi/addons/script.module.beautifulsoup4/lib')
-    from bs4 import BeautifulSoup
-
 __PLUGIN_ID__ = "plugin.audio.deutschlandfunk"
 
 URL_STREAMS_RPC = "https://srv.deutschlandradio.de/config-feed.2828.de.rpc"
@@ -29,18 +23,38 @@ URL_PODCASTS_DLF = "https://www.deutschlandfunk.de/podcasts.2516.de.html?drpp%3A
 URL_PODCASTS_DLK = "https://www.deutschlandfunkkultur.de/podcasts.2502.de.html?drpp%3Ahash=displayAllBroadcasts"
 URL_PODCASTS_NOVA = "https://www.deutschlandfunknova.de/podcasts"
 
+# see https://forum.kodi.tv/showthread.php?tid=112916
+_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May",
+           "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
 settings = xbmcaddon.Addon(id=__PLUGIN_ID__)
 addon_dir = xbmcvfs.translatePath(settings.getAddonInfo('path'))
+
+
+class HttpStatusError(Exception):
+
+    message = ""
+
+    def __init__(self, msg):
+
+        self.message = msg
 
 
 class Mediathek:
 
     _menu = None
-    _addon_handle = None
+
+    addon_handle = None
 
     def __init__(self):
 
-        meta = self._loadJSON(URL_STREAMS_RPC)
+        try:
+            meta = self._load_json(URL_STREAMS_RPC)
+        except HttpStatusError as error:
+            xbmc.log("HTTP Status Error: %s, path=%s" %
+                     (error.message, URL_STREAMS_RPC), xbmc.LOGERROR)
+            xbmcgui.Dialog().notification("HTTP Status Error", error.message)
+            return
 
         self._menu = [
             {  # root
@@ -49,29 +63,23 @@ class Mediathek:
                     {
                         "path": "dlf",
                         "name": "Deutschlandfunk",
-                        "icon": "icon_dlf",
+                        "icon": os.path.join(
+                            addon_dir, "resources", "assets", "icon_dlf.png"),
                         "node": [
                             {
                                 "path": "stream",
                                 "name": "Deutschlandfunk",
-                                "icon": "icon_dlf",
-                                "params": [
-                                    {
-                                        "call": "play",
-                                        "url": meta['livestreams']['dlf']['mp3']['high']
-                                    }
-                                ]
+                                "icon": os.path.join(
+                                    addon_dir, "resources", "assets", "icon_dlf.png"),
+                                "stream_url": meta['livestreams']['dlf']['mp3']['high'],
+                                "type": "music",
+                                "specialsort": "top"
                             },
                             {
                                 "path": "podcasts",
                                 "name": "Podcasts",
-                                "icon": "icon_dlf_rss",
-                                "params": [
-                                    {
-                                        "call": "parseDLF",
-                                        "url": URL_PODCASTS_DLF
-                                    }
-                                ],
+                                "icon": os.path.join(
+                                    addon_dir, "resources", "assets", "icon_dlf_rss.png"),
                                 "node": []
                             }
                         ]
@@ -79,29 +87,23 @@ class Mediathek:
                     {
                         "path": "dkultur",
                         "name": "Deutschlandfunk Kultur",
-                        "icon": "icon_drk",
+                        "icon": os.path.join(
+                            addon_dir, "resources", "assets", "icon_drk.png"),
                         "node": [
                             {
                                 "path": "stream",
                                 "name": "Deutschlandfunk Kultur",
-                                "icon": "icon_drk",
-                                "params": [
-                                    {
-                                        "call": "play",
-                                        "url": meta['livestreams']['dlf_kultur']['mp3']['high']
-                                    }
-                                ]
+                                "icon": os.path.join(
+                                    addon_dir, "resources", "assets", "icon_drk.png"),
+                                "stream_url": meta['livestreams']['dlf_kultur']['mp3']['high'],
+                                "type": "music",
+                                "specialsort": "top"
                             },
                             {
                                 "path": "podcasts",
                                 "name": "Podcasts",
-                                "icon": "icon_drk_rss",
-                                "params": [
-                                    {
-                                        "call": "parseDLF",
-                                        "url": URL_PODCASTS_DLK
-                                    }
-                                ],
+                                "icon": os.path.join(
+                                    addon_dir, "resources", "assets", "icon_drk_rss.png"),
                                 "node": []
                             }
                         ]
@@ -109,29 +111,23 @@ class Mediathek:
                     {
                         "path": "nova",
                         "name": "Deutschlandfunk Nova",
-                        "icon": "icon_nova",
+                        "icon": os.path.join(
+                            addon_dir, "resources", "assets", "icon_nova.png"),
                         "node": [
                             {
                                 "path": "stream",
                                 "name": "Deutschlandfunk Nova",
-                                "icon": "icon_nova",
-                                "params": [
-                                    {
-                                        "call": "play",
-                                        "url": meta['livestreams']['dlf_nova']['mp3']['high']
-                                    }
-                                ]
+                                "icon": os.path.join(
+                                    addon_dir, "resources", "assets", "icon_nova.png"),
+                                "stream_url": meta['livestreams']['dlf_nova']['mp3']['high'],
+                                "type": "music",
+                                "specialsort": "top"
                             },
                             {
                                 "path": "podcasts",
                                 "name": "Podcasts",
-                                "icon": "icon_nova_rss",
-                                "params": [
-                                    {
-                                        "call": "parseNova",
-                                        "url": URL_PODCASTS_NOVA
-                                    }
-                                ],
+                                "icon": os.path.join(
+                                    addon_dir, "resources", "assets", "icon_nova_rss.png"),
                                 "node": []
                             }
                         ]
@@ -140,106 +136,12 @@ class Mediathek:
             }
         ]
 
-    def _requestHttp(self, url):
+    def _parse_nova(self, path):
 
-        parse = urllib.parse.urlparse(url)
-        if parse.scheme == "https":
-            conn = http.client.HTTPSConnection(parse.netloc)
-        else:
-            conn = http.client.HTTPConnection(parse.netloc)
-
-        headers = {'user-agent': "Mozilla/5.0"}
-        conn.request("GET", parse.path + (("?" + parse.query)
-                                          if parse.query != "" else ""), headers=headers)
-        res = conn.getresponse()
-        data = res.read()
-        return data.decode("utf-8")
-
-    def _loadJSON(self, url):
-
-        return json.loads(self._requestHttp(url))
-
-    def _loadRss(self, url):
-
-        return xmltodict.parse(self._requestHttp(url))
-
-    def playRss(self, parent, path, params):
-
-        url = params["url"][0]
-        rss_feed = self._loadRss(url)
-
-        channel = rss_feed["rss"]["channel"]
-        items = channel["item"]
-
-        index = int(params["index"][0])
-
-        item = items[index]
-        if "enclosure" in item:
-            stream_url = item["enclosure"]["@url"]
-        else:
-            stream_url = ["guid"]
-
-        xbmc.executebuiltin('PlayMedia(%s)' % stream_url)
-
-    def renderRss(self, parent, path, params):
-
-        url = params["url"][0]
-        rss_feed = self._loadRss(url)
-
-        channel = rss_feed["rss"]["channel"]
-        image = channel["image"]["url"]
-
-        if not "item" in channel:
-            xbmcplugin.endOfDirectory(self._addon_handle)
-            return
-
-        items = channel["item"]
-
-        index = 0
-
-        entries = []
-
-        for item in items:
-
-            #       Does not work: see https://forum.kodi.tv/showthread.php?tid=112916
-            #            if 'pubDate' in item:
-            #                pubDate = datetime.strptime(item['pubDate'][:-6], '%a, %d %b %Y %H:%M:%S')
-            #            else:
-            pubDate = None
-
-            entries = entries + [{
-                "path": str(index),
-                "name": item["title"],
-                "name2": item["description"],
-                "icon": image,
-                "params": [
-                    {
-                        "call": "playRss",
-                        "index": str(index),
-                        "url": url
-                    }
-                ],
-                "pubDate": pubDate
-
-            }]
-
-            index += 1
-
-#        entries = sorted(entries, key=itemgetter('pubDate'), reverse=True)
-        for entry in entries:
-
-            self._add_list_item(entry, path)
-
-        xbmcplugin.endOfDirectory(self._addon_handle)
-
-    def parseNova(self, parent, path, params):
-
-        BASE_URL = "https://www.deutschlandfunknova.de/podcast/"
-
-        url = params["url"][0]
+        _BASE_URL = "https://www.deutschlandfunknova.de/podcast/"
 
         # download html site with podcast overview
-        _data = self._requestHttp(url)
+        _data = self._request_get(URL_PODCASTS_NOVA)
 
         # parse site and read podcast meta data kindly provided as js
         soup = BeautifulSoup(_data, 'html.parser')
@@ -257,22 +159,19 @@ class Mediathek:
                 "icon": _img.get("src"),
                 "params": [
                     {
-                        "call": "renderRss",
-                        "url": BASE_URL + _path
+                        "rss": _BASE_URL + _path
                     }
                 ],
                 "node": []
             }
             self._add_list_item(entry, path)
 
-        xbmcplugin.endOfDirectory(self._addon_handle)
+        xbmcplugin.endOfDirectory(self.addon_handle)
 
-    def parseDLF(self, parent, path, params):
-
-        url = params["url"][0]
+    def _parse_dlf(self, path, url):
 
         # download html site with podcast overview
-        _data = self._requestHttp(url)
+        _data = self._request_get(url)
 
         soup = BeautifulSoup(_data, 'html.parser')
         _js_cast_defs = soup.select('span.abo.dradio-podlove')
@@ -284,158 +183,286 @@ class Mediathek:
                 "icon": _def["data-logosrc"],
                 "params": [
                     {
-                        "call": "renderRss",
-                        "url": _def["data-url"]
+                        "rss": _def["data-url"]
                     }
                 ],
                 "node": []
             }
             self._add_list_item(entry, path)
 
-        xbmcplugin.endOfDirectory(self._addon_handle)
+        xbmcplugin.endOfDirectory(self.addon_handle)
 
-    def parseDLK(self, parent, path, params):
+    def _request_get(self, url):
 
-        url = params["url"][0]
+        useragent = f"{settings.getAddonInfo('id')}/{settings.getAddonInfo('version')} (Kodi/{xbmc.getInfoLabel('System.BuildVersionShort')})"
+        headers = {'User-Agent': useragent}
+        res = requests.get(url, headers=headers)
 
-        # download html site with podcast overview
-        _data = self._requestHttp(url)
+        if res.status_code == 200:
+            return res.text
 
-        # parse site and read podcast meta data kindly provided as js
-        soup = BeautifulSoup(_data, 'html.parser')
-        _js_cast_defs = soup.select('li > script[type="text/javascript"]')
-        _regex = re.compile("window.podcastData_[0-9a-f_]+ = ")
-        _regex2 = re.compile("};")
+        else:
+            raise HttpStatusError(
+                "Unexpected HTTP Status %i for %s" % (res.status_code, url))
 
-        podcasts = []
-        for _def in _js_cast_defs:
+    def _load_json(self, url):
 
-            _def = _regex.sub("", _def.text)
-            _def = _regex2.sub("}", _def)
-            _json_def = json.loads(_def)
-            podcasts += [_json_def]
+        return json.loads(self._request_get(url))
 
-        for podcast in podcasts:
+    def _load_rss(self, url):
 
-            entry = {
-                "path": podcast["id"],
-                "name": podcast["title"],
-                "icon": podcast["cover"],
-                "params": [
-                    {
-                        "call": "renderRss",
-                        "url": podcast["feeds"][0]["url"]
-                    }
-                ],
-                "node": []
+        def _parse_item(_ci):
+
+            if "enclosure" in _ci and "@url" in _ci["enclosure"]:
+                stream_url = _ci["enclosure"]["@url"]
+                if _ci["enclosure"]["@type"].split("/")[0] == "video":
+                    _type = "video"
+                else:
+                    _type = "music"
+            elif "guid" in _ci and _ci["guid"]:
+                # not supported yet
+                return None
+            else:
+                return None
+
+            if "itunes:image" in _ci and "@href" in _ci["itunes:image"]:
+                item_image = _ci["itunes:image"]["@href"]
+            else:
+                item_image = image
+
+            if "pubDate" in _ci:
+                _f = re.findall(
+                    "(\d{1,2}) (\w{3}) (\d{4}) (\d{2}):(\d{2}):(\d{2})", _ci["pubDate"])
+
+                if _f:
+                    _m = _MONTHS.index(_f[0][1]) + 1
+                    pubDate = datetime(year=int(_f[0][2]), month=_m, day=int(_f[0][0]), hour=int(
+                        _f[0][3]), minute=int(_f[0][4]), second=int(_f[0][5]))
+
+                else:
+                    pubDate = None
+
+            return {
+                "name": _ci["title"],
+                "name2": _ci["description"] if "description" in _ci else "",
+                "date": pubDate,
+                "icon": item_image,
+                "stream_url": stream_url,
+                "type": _type
             }
-            self._add_list_item(entry, path)
 
-        xbmcplugin.endOfDirectory(self._addon_handle)
+        res = self._request_get(url)
+        if res.startswith("<?xml"):
+            rss_feed = xmltodict.parse(res)
 
-    def play(self, parent, path, params):
+        else:
+            raise HttpStatusError("Unexpected content for podcast %s" % url)
 
-        url = params["url"][0]
-        xbmc.executebuiltin('PlayMedia(%s)' % url)
+        channel = rss_feed["rss"]["channel"]
+        title = channel["title"] if "title" in channel else ""
+        description = channel["description"] if "description" in channel else ""
 
-    def _get_node_by_path(self, path):
+        if "image" in channel and "url" in channel["image"]:
+            image = channel["image"]["url"]
+        elif "itunes:image" in channel:
+            image = channel["itunes:image"]["@href"]
+        else:
+            image = None
 
-        if path == "/":
-            return self._menu[0]
+        items = []
+        if type(channel["item"]) is list:
+            for _ci in channel["item"]:
+                item = _parse_item(_ci)
+                if item is not None:
+                    items += [item]
 
-        tokens = path.split("/")[1:]
-        directory = self._menu[0]
+        else:
+            item = _parse_item(channel["item"])
+            if item is not None:
+                items += [item]
 
-        while len(tokens) > 0:
-            path = tokens.pop(0)
-            for node in directory["node"]:
-                if node["path"] == path:
-                    directory = node
-                    break
+        return title, description, image, items
 
-        return directory
+    def _render_rss(self, path, url):
 
-    def _build_param_string(self, params, current=""):
+        try:
+            title, description, image, items = self._load_rss(url)
 
-        if params == None:
+        except HttpStatusError as error:
+            xbmc.log("HTTP Status Error: %s, path=%s" %
+                     (error.message, path), xbmc.LOGERROR)
+            xbmcgui.Dialog().notification("HTTP Status Error", error.message)
+
+        else:
+            if len(items) > 0:
+
+                entry = {
+                    "path": "latest",
+                    "name": title,
+                    "name2": description,
+                    "icon": image,
+                    "date": datetime.now(),
+                    "specialsort": "top",
+                    "type": items[0]["type"],
+                    "params": [
+                        {
+                            "play_latest": url
+                        }
+                    ]
+                }
+                self._add_list_item(entry, path, playable=True)
+
+            for item in items:
+                li = self._create_list_item(item)
+                xbmcplugin.addDirectoryItem(handle=self.addon_handle,
+                                            listitem=li,
+                                            url=item["stream_url"],
+                                            isFolder=False)
+
+            if "setDateTime" in dir(li):  # available since Kodi v20
+                xbmcplugin.addSortMethod(
+                    self.addon_handle, xbmcplugin.SORT_METHOD_DATE)
+            xbmcplugin.endOfDirectory(self.addon_handle)
+
+    def _create_list_item(self, item):
+
+        li = xbmcgui.ListItem(label=item["name"])
+
+        if "name2" in item:
+            li.setProperty("label2", item["name2"])
+
+        if "stream_url" in item:
+            li.setPath(item["stream_url"])
+
+        if "type" in item:
+            li.setInfo(item["type"], {"Title": item["name"]})
+
+        if "icon" in item and item["icon"]:
+            li.setArt({"icon": item["icon"]})
+        else:
+            li.setArt({"icon": os.path.join(
+                addon_dir, "resources", "assets", "icon.png")}
+            )
+
+        if "date" in item and item["date"]:
+            if "setDateTime" in dir(li):  # available since Kodi v20
+                li.setDateTime(item["date"].strftime("%Y-%m-%dT%H:%M:%SZ"))
+            else:
+                pass
+
+        if "specialsort" in item:
+            li.setProperty("SpecialSort", item["specialsort"])
+
+        return li
+
+    def _add_list_item(self, entry, path, playable=False):
+
+        def _build_param_string(params, current=""):
+
+            if params == None:
+                return current
+
+            for obj in params:
+                for name in obj:
+                    enc_value = base64.urlsafe_b64encode(
+                        obj[name].encode("utf-8"))
+                    current += "?" if len(current) == 0 else "&"
+                    current += name + "=" + str(enc_value, "utf-8")
+
             return current
-
-        for obj in params:
-            for name in obj:
-                current += "?" if len(current) == 0 else "&"
-                current += name + "=" + str(obj[name])
-
-        return current
-
-    def _add_list_item(self, entry, path):
 
         if path == "/":
             path = ""
 
         item_path = path + "/" + entry["path"]
-        item_id = item_path.replace("/", "_")
 
         param_string = ""
         if "params" in entry:
-            param_string = self._build_param_string(entry["params"],
-                                                    current=param_string)
+            param_string = _build_param_string(entry["params"],
+                                               current=param_string)
 
-        if "node" in entry:
-            is_folder = True
+        li = self._create_list_item(entry)
+
+        is_folder = "node" in entry
+        if not is_folder and "stream_url" in entry:
+            url = entry["stream_url"]
+            playable = True
         else:
-            is_folder = False
+            url = "".join(
+                ["plugin://", __PLUGIN_ID__, item_path, param_string])
 
-        label = entry["name"]
+        if playable:
+            li.setProperty("IsPlayable", "true")
 
-        if settings.getSetting("label%s" % item_id) != "":
-            label = settings.getSetting("label%s" % item_id)
-
-        if "icon" in entry and entry["icon"].startswith("http"):
-            icon_file = entry["icon"]
-
-        elif "icon" in entry:
-            icon_file = os.path.join(addon_dir,
-                                     "resources",
-                                     "assets",
-                                     entry["icon"] + ".png")
-        else:
-            icon_file = None
-
-        li = xbmcgui.ListItem(label)
-        li.setArt({"icon": icon_file})
-
-        if "name2" in entry:
-            li.setLabel2(entry["name2"])
-
-        xbmcplugin.addDirectoryItem(handle=self._addon_handle,
+        xbmcplugin.addDirectoryItem(handle=self.addon_handle,
                                     listitem=li,
-                                    url="plugin://" + __PLUGIN_ID__
-                                    + item_path
-                                    + param_string,
+                                    url=url,
                                     isFolder=is_folder)
 
-    def _browse(self, parent, path):
+    def _play_latest(self, url):
 
-        for entry in parent["node"]:
+        try:
+            title, description, image, items = self._load_rss(url)
+            item = items[0]
+            li = self._create_list_item(item)
+            xbmcplugin.setResolvedUrl(self.addon_handle, True, li)
+
+        except HttpStatusError as error:
+
+            xbmcgui.Dialog().notification("HTTP Status Error", error.message)
+
+    def _browse(self, path):
+
+        def _get_node_by_path(path):
+
+            if path == "/":
+                return self._menu[0]
+
+            tokens = path.split("/")[1:]
+            node = self._menu[0]
+
+            while len(tokens) > 0:
+                path = tokens.pop(0)
+                for n in node["node"]:
+                    if n["path"] == path:
+                        node = n
+                        break
+
+            return node
+
+        node = _get_node_by_path(path)
+        for entry in node["node"]:
             self._add_list_item(entry, path)
 
-        xbmcplugin.endOfDirectory(self._addon_handle)
+        xbmcplugin.endOfDirectory(self.addon_handle)
 
     def handle(self, argv):
 
-        self._addon_handle = int(argv[1])
+        def decode_param(encoded_param):
 
-        path = urllib.parse.urlparse(argv[0]).path
+            return base64.urlsafe_b64decode(encoded_param).decode("utf-8")
+
+        self.addon_handle = int(argv[1])
+
+        path = urllib.parse.urlparse(argv[0]).path.replace("//", "/")
+        splitted_path = path.split("/")
         url_params = urllib.parse.parse_qs(argv[2][1:])
 
-        node = self._get_node_by_path(path)
-        if "call" in url_params:
-            getattr(self, url_params["call"][0])(parent=node,
-                                                 path=path,
-                                                 params=url_params)
-
+        if "rss" in url_params:
+            url = decode_param(url_params["rss"][0])
+            self._render_rss(path, url)
+        elif "play_latest" in url_params:
+            url = decode_param(url_params["play_latest"][0])
+            self._play_latest(url)
+        elif len(splitted_path) == 3 and splitted_path[2] == "podcasts":
+            if splitted_path[1] == "dlf":
+                self._parse_dlf(path, URL_PODCASTS_DLF)
+            elif splitted_path[1] == "dkultur":
+                self._parse_dlf(path, URL_PODCASTS_DLK)
+            elif splitted_path[1] == "nova":
+                self._parse_nova(path)
         else:
-            self._browse(parent=node, path=path)
+            self._browse(path=path)
 
 
 if __name__ == '__main__':
