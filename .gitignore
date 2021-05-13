@@ -1,0 +1,4 @@
+__pycache__
+**/*.pyo
+gpodder.net.http
+nohup.out
