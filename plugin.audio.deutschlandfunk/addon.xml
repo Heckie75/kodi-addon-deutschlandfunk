@@ -25,8 +25,9 @@ sämtliche Podcasts der Sender gestreamt werden.</description>
         <website>https://github.com/Heckie75/kodi-addon-deutschlandfunk</website>
         <source>https://github.com/Heckie75/kodi-addon-deutschlandfunk/tree/master/plugin.audio.deutschlandfunk</source>
         <news>
-v2.0.1 (2021-05-31)
-- Refactoring only. No functional changes
+v2.0.1 (2021-06-27)
+- Fixed incorrect navigation from specific podcast to station's podcasts menu when using Kodi Kore App 
+- Refactoring
 
 v2.0.0 (2021-05-13)
 - Migration to Kodi 19 (Matrix)

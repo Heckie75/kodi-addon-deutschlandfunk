@@ -22,31 +22,36 @@ class DeutschlandfunkAddon(AbstractRssAddon):
     URL_PODCASTS_DLK = "https://www.deutschlandfunkkultur.de/podcasts.2502.de.html?drpp%3Ahash=displayAllBroadcasts"
     URL_PODCASTS_NOVA = "https://www.deutschlandfunknova.de/podcasts"
 
+    PATH_DLF = "dlf"
+    PATH_DLK = "dkultur"
+    PATH_NOVA = "nova"
+    PATH_PODCASTS = "podcasts"
+
     addon = xbmcaddon.Addon(id=__PLUGIN_ID__)
 
     def __init__(self, addon_handle):
 
-        super().__init__(self.__PLUGIN_ID__, addon_handle)
+        super().__init__(addon_handle)
 
     def _make_root_menu(self):
 
         nodes = [
             {
-                "path": "dlf",
+                "path": DeutschlandfunkAddon.PATH_DLF,
                 "name": "Deutschlandfunk",
                 "icon": os.path.join(
                     self.addon_dir, "resources", "assets", "icon_dlf.png"),
                 "node": []
             },
             {
-                "path": "dkultur",
+                "path": DeutschlandfunkAddon.PATH_DLK,
                 "name": "Deutschlandfunk Kultur",
                 "icon": os.path.join(
                     self.addon_dir, "resources", "assets", "icon_drk.png"),
                 "node": []
             },
             {
-                "path": "nova",
+                "path": DeutschlandfunkAddon.PATH_NOVA,
                 "name": "Deutschlandfunk Nova",
                 "icon": os.path.join(
                     self.addon_dir, "resources", "assets", "icon_nova.png"),
@@ -59,20 +64,20 @@ class DeutschlandfunkAddon(AbstractRssAddon):
 
         xbmcplugin.endOfDirectory(self.addon_handle, updateListing=False)
 
-    def _make_station_menu(self, path):
+    def _make_station_menu(self, station):
 
         try:
             _json, _cookies = http_request(self.addon, self.URL_STREAMS_RPC)
             meta = json.loads(_json)
 
         except HttpStatusError as error:
-            xbmc.log("HTTP Status Error: %s, path=%s" %
-                     (error.message, path), xbmc.LOGERROR)
+            xbmc.log("HTTP Status Error: %s, station=%s" %
+                     (error.message, station), xbmc.LOGERROR)
             xbmcgui.Dialog().notification(self.addon.getLocalizedString(32151), error.message)
             return
 
         nodes = list()
-        if "/dlf" == path:
+        if DeutschlandfunkAddon.PATH_DLF == station:
             nodes.append({
                 "path": "stream",
                 "name": "Deutschlandfunk",
@@ -83,14 +88,14 @@ class DeutschlandfunkAddon(AbstractRssAddon):
                 "specialsort": "top"
             })
             nodes.append({
-                "path": "podcasts",
+                "path": DeutschlandfunkAddon.PATH_PODCASTS,
                 "name": "Podcasts",
                 "icon": os.path.join(
                         self.addon_dir, "resources", "assets", "icon_dlf_rss.png"),
                 "node": []
             })
 
-        elif "/dkultur" == path:
+        elif DeutschlandfunkAddon.PATH_DLK == station:
             nodes.append({
                 "path": "stream",
                 "name": "Deutschlandfunk Kultur",
@@ -101,14 +106,14 @@ class DeutschlandfunkAddon(AbstractRssAddon):
                 "specialsort": "top"
             })
             nodes.append({
-                "path": "podcasts",
+                "path": DeutschlandfunkAddon.PATH_PODCASTS,
                 "name": "Podcasts",
                 "icon": os.path.join(
                         self.addon_dir, "resources", "assets", "icon_drk_rss.png"),
                 "node": []
             })
 
-        elif "/nova" == path:
+        elif DeutschlandfunkAddon.PATH_NOVA == station:
             nodes.append({
                 "path": "stream",
                 "name": "Deutschlandfunk Nova",
@@ -119,7 +124,7 @@ class DeutschlandfunkAddon(AbstractRssAddon):
                 "specialsort": "top"
             })
             nodes.append({
-                "path": "podcasts",
+                "path": DeutschlandfunkAddon.PATH_PODCASTS,
                 "name": "Podcasts",
                 "icon": os.path.join(
                         self.addon_dir, "resources", "assets", "icon_nova_rss.png"),
@@ -127,7 +132,7 @@ class DeutschlandfunkAddon(AbstractRssAddon):
             })
 
         for entry in nodes:
-            self.add_list_item(entry, path)
+            self.add_list_item(entry, "/%s" % station)
 
         xbmcplugin.endOfDirectory(self.addon_handle, updateListing=False)
 
@@ -195,20 +200,20 @@ class DeutschlandfunkAddon(AbstractRssAddon):
 
     def route(self, path, url_params):
 
-        splitted_path = path.split("/")
-        if len(splitted_path) == 3 and splitted_path[2] == "podcasts":
+        splitted_path = list(filter(lambda n: n != "", path.split("/")))
+        if len(splitted_path) == 2 and splitted_path[1] == DeutschlandfunkAddon.PATH_PODCASTS:
 
-            if splitted_path[1] == "dlf":
+            if splitted_path[0] == DeutschlandfunkAddon.PATH_DLF:
                 self._parse_dlf(path, self.URL_PODCASTS_DLF)
 
-            elif splitted_path[1] == "dkultur":
+            elif splitted_path[0] == DeutschlandfunkAddon.PATH_DLK:
                 self._parse_dlf(path, self.URL_PODCASTS_DLK)
 
-            elif splitted_path[1] == "nova":
+            elif splitted_path[0] == DeutschlandfunkAddon.PATH_NOVA:
                 self._parse_nova(path)
 
-        elif len(splitted_path) == 2 and splitted_path[1] != "":
-            self._make_station_menu(path)
+        elif len(splitted_path) == 1 and splitted_path[0] in [DeutschlandfunkAddon.PATH_DLF, DeutschlandfunkAddon.PATH_DLK, DeutschlandfunkAddon.PATH_NOVA]:
+            self._make_station_menu(splitted_path[0])
 
         else:
             self._make_root_menu()
